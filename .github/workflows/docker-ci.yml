@@ -1,0 +1,49 @@
+name: docker-ci
+
+on:
+  push:
+    tags:        
+      - "v*"
+    branches: [ master ]
+
+jobs:
+  docker-ci:
+    runs-on: ubuntu-20.04
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v3
+        with:
+          images: |
+             docker.io/${{ github.repository }}
+#          tags: |
+#            type=semver,pattern={{raw}}
+#           type=semver,pattern=v{{major}}.{{minor}}
+          flavor: |
+            latest=true
+
+      - name: Login to docker.io Container Registry
+        uses: docker/login-action@v1 
+        with:
+          registry: docker.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.BOT_DOCKER_IO }}
+
+      - name: Build and push
+        id: build-release
+        uses: docker/build-push-action@v2
+        with:
+          file: Dockerfile
+          context: .
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+#          build-args: |
+#           KUBECTL_VERSION=${{ steps.meta.outputs.version }}
+
+      - name: Image digest
+        run: echo ${{ steps.build-release.outputs.digest }}
